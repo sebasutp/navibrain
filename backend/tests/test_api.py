@@ -31,6 +31,12 @@ def mock_dependencies():
 
         async def delete_playlist(self, playlist_id):
             return True
+            
+        async def remove_songs_from_playlist(self, playlist_id, song_indexes):
+            return True
+            
+        async def rename_playlist(self, playlist_id, new_name):
+            return True
 
     class MockRecommender:
         async def get_recommendations(self, seed_song_ids, navidrome_client, count=20):
@@ -151,3 +157,65 @@ def test_delete_local_song_success(client, session, mock_dependencies):
         song_to_delete = songs[0]["id"]
         response = client.delete(f"/api/songs/local/{song_to_delete}")
         assert response.status_code == 200
+
+def test_rename_local_playlist(client, session, mock_dependencies):
+    playlist_id = test_generate_playlist_api(client, session, mock_dependencies)
+    response = client.put(f"/api/playlists/local/{playlist_id}", json={"name": "Renamed List"})
+    assert response.status_code == 200
+    
+    response = client.get("/api/playlists/local")
+    data = response.json()
+    renamed = next(p for p in data if p["id"] == playlist_id)
+    assert renamed["name"] == "Renamed List"
+
+def test_add_song_to_playlist(client, session, mock_dependencies):
+    playlist_id = test_generate_playlist_api(client, session, mock_dependencies)
+    
+    # We must add a new song to the DB first because the endpoint checks for its existence
+    new_song = Song(id="new-seed-99", title="Brand New Song", artist="Artist")
+    session.add(new_song)
+    session.commit()
+    
+    response = client.post(f"/api/playlists/local/{playlist_id}/songs", json={"song_id": "new-seed-99"})
+    assert response.status_code == 200
+    
+    response = client.get("/api/playlists/local")
+    data = response.json()
+    playlist = next(p for p in data if p["id"] == playlist_id)
+    # The list originally had 20 songs, plus our addition, should be 21
+    assert len(playlist["songs"]) == 21
+    # Check that it appended to the end (since order_index logic adds to bottom)
+    assert playlist["songs"][-1]["id"] == "new-seed-99"
+
+def test_add_song_not_in_db(client, session, mock_dependencies):
+    # Tests adding a song that Navidrome knows about, but sqlite hasn't saved yet
+    playlist_id = test_generate_playlist_api(client, session, mock_dependencies)
+    
+    # We don't add "navidrome-only-song" to sqlite. Our mock get_song will return it.
+    response = client.post(f"/api/playlists/local/{playlist_id}/songs", json={"song_id": "navidrome-only-song"})
+    if response.status_code != 200:
+        print(response.json())
+    assert response.status_code == 200
+    
+    # Verify it was added
+    response = client.get("/api/playlists/local")
+    playlist_data = next(p for p in response.json() if p["id"] == playlist_id)
+    assert playlist_data["songs"][-1]["id"] == "navidrome-only-song"
+
+def test_remove_song_from_playlist(client, session, mock_dependencies):
+    playlist_id = test_generate_playlist_api(client, session, mock_dependencies)
+    
+    response = client.get("/api/playlists/local")
+    data = response.json()
+    playlist = next(p for p in data if p["id"] == playlist_id)
+    
+    song_to_remove = playlist["songs"][0]["id"]
+    
+    response = client.delete(f"/api/playlists/local/{playlist_id}/songs/{song_to_remove}")
+    assert response.status_code == 200
+    
+    response = client.get("/api/playlists/local")
+    data = response.json()
+    playlist = next(p for p in data if p["id"] == playlist_id)
+    assert len(playlist["songs"]) == 19
+    assert not any(s["id"] == song_to_remove for s in playlist["songs"])

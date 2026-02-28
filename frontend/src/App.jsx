@@ -124,7 +124,7 @@ function App() {
           </div>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '1rem', marginBottom: '2rem' }}>
           <button
             onClick={() => setActiveTab('generate')}
             style={{

@@ -104,6 +104,41 @@ class NavidromeClient:
             
             return data.get("subsonic-response", {}).get("status") == "ok"
 
+    async def remove_songs_from_playlist(self, playlist_id: str, song_indexes: List[int]) -> bool:
+        """Removes songs from a playlist at the given indexes."""
+        if not song_indexes:
+            return True
+            
+        params = self._get_auth_params()
+        params.update({"playlistId": playlist_id})
+        
+        # Subsonic expects songIndexToRemove parameters
+        query_params = list(params.items())
+        for idx in song_indexes:
+            query_params.append(("songIndexToRemove", str(idx)))
+            
+        async with httpx.AsyncClient() as client:
+            response = await client.post(f"{self.base_url}/rest/updatePlaylist", params=query_params)
+            response.raise_for_status()
+            data = response.json()
+            
+            return data.get("subsonic-response", {}).get("status") == "ok"
+
+    async def rename_playlist(self, playlist_id: str, new_name: str) -> bool:
+        """Changes a playlist name. We still enforce the navibrain_ prefix convention."""
+        params = self._get_auth_params()
+        params.update({
+            "playlistId": playlist_id,
+            "name": new_name
+        })
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(f"{self.base_url}/rest/updatePlaylist", params=params)
+            response.raise_for_status()
+            data = response.json()
+            
+            return data.get("subsonic-response", {}).get("status") == "ok"
+
     async def get_playlists(self) -> List[dict]:
         params = self._get_auth_params()
         

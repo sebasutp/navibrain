@@ -12,7 +12,7 @@ function SongSelector({ onSearch, onSelect, searchResults = [], onLoadMore, hasM
 
     return (
         <div className="song-selector">
-            <div className="search-container" style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="search-container" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
                 <input
                     type="text"
                     placeholder="Search for a seed song by title or artist..."
@@ -20,7 +20,7 @@ function SongSelector({ onSearch, onSelect, searchResults = [], onLoadMore, hasM
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                     style={{
-                        flex: 1,
+                        flex: '1 1 200px',
                         padding: '1rem',
                         borderRadius: '8px',
                         border: '1px solid var(--glass-border)',
@@ -35,7 +35,8 @@ function SongSelector({ onSearch, onSelect, searchResults = [], onLoadMore, hasM
                     onClick={handleSearch}
                     disabled={!query.trim()}
                     style={{
-                        padding: '0 2rem',
+                        flex: '1 1 auto',
+                        padding: '1rem 2rem',
                         borderRadius: '8px',
                         border: 'none',
                         background: query.trim() ? 'var(--accent-color)' : 'rgba(255,255,255,0.1)',
